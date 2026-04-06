@@ -1,10 +1,12 @@
 import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
+import swaggerUi from 'swagger-ui-express';
 import { requestLogger } from './middleware/request-logger.js';
 import { errorHandler } from './middleware/error-handler.js';
 import { globalRateLimit } from './middleware/rate-limit.js';
 import { rootRouter } from './routes/index.js';
+import { swaggerSpec } from './lib/swagger.js';
 
 export const app = express();
 
@@ -15,6 +17,10 @@ app.use(express.json());
 
 // Logging (after body parsing so content-length is accurate)
 app.use(requestLogger);
+
+// Swagger UI — served before rate limiting so docs are always accessible
+app.use('/api/docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
+app.get('/api/docs.json', (_req, res) => res.json(swaggerSpec));
 
 // Global rate limiting: 100 req / min per IP
 app.use('/api', globalRateLimit);

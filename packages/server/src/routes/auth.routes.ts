@@ -60,6 +60,45 @@ function sanitizeUser(user: { id: string; email: string; name: string; avatarUrl
 
 // ─── Routes ──────────────────────────────────────────────────────────────────
 
+/**
+ * @openapi
+ * /auth/register:
+ *   post:
+ *     tags: [Auth]
+ *     summary: Register a new user
+ *     security: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [email, password, name]
+ *             properties:
+ *               email: { type: string, format: email, example: alice@example.com }
+ *               password: { type: string, minLength: 8, example: Password123 }
+ *               name: { type: string, minLength: 2, example: Alice }
+ *     responses:
+ *       201:
+ *         description: User registered
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success: { type: boolean, example: true }
+ *                 data:
+ *                   allOf:
+ *                     - $ref: '#/components/schemas/TokenPair'
+ *                     - type: object
+ *                       properties:
+ *                         user: { $ref: '#/components/schemas/User' }
+ *       409:
+ *         description: Email already taken
+ *         content:
+ *           application/json:
+ *             schema: { $ref: '#/components/schemas/ApiError' }
+ */
 // POST /api/auth/register
 authRouter.post(
   '/register',
@@ -83,6 +122,44 @@ authRouter.post(
   }),
 );
 
+/**
+ * @openapi
+ * /auth/login:
+ *   post:
+ *     tags: [Auth]
+ *     summary: Log in
+ *     security: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [email, password]
+ *             properties:
+ *               email: { type: string, format: email, example: alice@example.com }
+ *               password: { type: string, example: Password123 }
+ *     responses:
+ *       200:
+ *         description: Login successful
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success: { type: boolean, example: true }
+ *                 data:
+ *                   allOf:
+ *                     - $ref: '#/components/schemas/TokenPair'
+ *                     - type: object
+ *                       properties:
+ *                         user: { $ref: '#/components/schemas/User' }
+ *       401:
+ *         description: Invalid credentials
+ *         content:
+ *           application/json:
+ *             schema: { $ref: '#/components/schemas/ApiError' }
+ */
 // POST /api/auth/login
 authRouter.post(
   '/login',
@@ -103,6 +180,38 @@ authRouter.post(
   }),
 );
 
+/**
+ * @openapi
+ * /auth/refresh:
+ *   post:
+ *     tags: [Auth]
+ *     summary: Rotate refresh token
+ *     security: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [refreshToken]
+ *             properties:
+ *               refreshToken: { type: string }
+ *     responses:
+ *       200:
+ *         description: New token pair issued
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success: { type: boolean, example: true }
+ *                 data: { $ref: '#/components/schemas/TokenPair' }
+ *       401:
+ *         description: Invalid or expired refresh token
+ *         content:
+ *           application/json:
+ *             schema: { $ref: '#/components/schemas/ApiError' }
+ */
 // POST /api/auth/refresh  — token rotation: old refresh → new pair
 authRouter.post(
   '/refresh',
@@ -127,6 +236,33 @@ authRouter.post(
   }),
 );
 
+/**
+ * @openapi
+ * /auth/me:
+ *   get:
+ *     tags: [Auth]
+ *     summary: Get current user
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Current user profile
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success: { type: boolean, example: true }
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     user: { $ref: '#/components/schemas/User' }
+ *       401:
+ *         description: Missing or invalid token
+ *         content:
+ *           application/json:
+ *             schema: { $ref: '#/components/schemas/ApiError' }
+ */
 // GET /api/auth/me
 authRouter.get(
   '/me',

@@ -12,6 +12,65 @@ export const projectRouter = Router({ mergeParams: true });
 
 projectRouter.use(authenticate);
 
+/**
+ * @openapi
+ * /workspaces/{workspaceId}/projects:
+ *   post:
+ *     tags: [Projects]
+ *     summary: Create a project (ADMIN or OWNER)
+ *     parameters:
+ *       - in: path
+ *         name: workspaceId
+ *         required: true
+ *         schema: { type: string, format: uuid }
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [name, prefix]
+ *             properties:
+ *               name: { type: string, example: My Project }
+ *               prefix: { type: string, example: PROJ }
+ *               description: { type: string }
+ *     responses:
+ *       201:
+ *         description: Project created with default statuses
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success: { type: boolean }
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     project: { $ref: '#/components/schemas/Project' }
+ *   get:
+ *     tags: [Projects]
+ *     summary: List projects in a workspace
+ *     parameters:
+ *       - in: path
+ *         name: workspaceId
+ *         required: true
+ *         schema: { type: string, format: uuid }
+ *     responses:
+ *       200:
+ *         description: List of projects
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success: { type: boolean }
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     projects:
+ *                       type: array
+ *                       items: { $ref: '#/components/schemas/Project' }
+ */
 // POST /api/workspaces/:workspaceId/projects
 projectRouter.post(
   '/',

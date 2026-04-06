@@ -12,6 +12,63 @@ export const commentRouter = Router();
 taskCommentRouter.use(authenticate);
 commentRouter.use(authenticate);
 
+/**
+ * @openapi
+ * /tasks/{taskId}/comments:
+ *   post:
+ *     tags: [Comments]
+ *     summary: Add a comment to a task
+ *     parameters:
+ *       - in: path
+ *         name: taskId
+ *         required: true
+ *         schema: { type: string, format: uuid }
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [content]
+ *             properties:
+ *               content: { type: string, minLength: 1 }
+ *     responses:
+ *       201:
+ *         description: Comment created
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success: { type: boolean }
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     comment: { $ref: '#/components/schemas/Comment' }
+ *   get:
+ *     tags: [Comments]
+ *     summary: List comments for a task
+ *     parameters:
+ *       - in: path
+ *         name: taskId
+ *         required: true
+ *         schema: { type: string, format: uuid }
+ *     responses:
+ *       200:
+ *         description: Comment list
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success: { type: boolean }
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     comments:
+ *                       type: array
+ *                       items: { $ref: '#/components/schemas/Comment' }
+ */
 // POST /api/tasks/:taskId/comments
 taskCommentRouter.post(
   '/:taskId/comments',

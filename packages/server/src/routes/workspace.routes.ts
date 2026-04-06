@@ -16,6 +16,55 @@ export const workspaceRouter = Router();
 
 workspaceRouter.use(authenticate);
 
+/**
+ * @openapi
+ * /workspaces:
+ *   post:
+ *     tags: [Workspaces]
+ *     summary: Create a workspace
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [name, slug]
+ *             properties:
+ *               name: { type: string, example: Acme Corp }
+ *               slug: { type: string, example: acme-corp }
+ *               description: { type: string }
+ *     responses:
+ *       201:
+ *         description: Workspace created
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success: { type: boolean, example: true }
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     workspace: { $ref: '#/components/schemas/Workspace' }
+ *   get:
+ *     tags: [Workspaces]
+ *     summary: List workspaces for current user
+ *     responses:
+ *       200:
+ *         description: List of workspaces
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success: { type: boolean, example: true }
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     workspaces:
+ *                       type: array
+ *                       items: { $ref: '#/components/schemas/Workspace' }
+ */
 // POST /api/workspaces
 workspaceRouter.post(
   '/',
@@ -35,6 +84,76 @@ workspaceRouter.get(
   }),
 );
 
+/**
+ * @openapi
+ * /workspaces/{workspaceId}:
+ *   get:
+ *     tags: [Workspaces]
+ *     summary: Get workspace by ID
+ *     parameters:
+ *       - in: path
+ *         name: workspaceId
+ *         required: true
+ *         schema: { type: string, format: uuid }
+ *     responses:
+ *       200:
+ *         description: Workspace details
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success: { type: boolean }
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     workspace: { $ref: '#/components/schemas/Workspace' }
+ *       404:
+ *         description: Not found
+ *         content:
+ *           application/json:
+ *             schema: { $ref: '#/components/schemas/ApiError' }
+ *   patch:
+ *     tags: [Workspaces]
+ *     summary: Update workspace (ADMIN or OWNER)
+ *     parameters:
+ *       - in: path
+ *         name: workspaceId
+ *         required: true
+ *         schema: { type: string, format: uuid }
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               name: { type: string }
+ *               description: { type: string }
+ *     responses:
+ *       200:
+ *         description: Updated workspace
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success: { type: boolean }
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     workspace: { $ref: '#/components/schemas/Workspace' }
+ *   delete:
+ *     tags: [Workspaces]
+ *     summary: Delete workspace (OWNER only)
+ *     parameters:
+ *       - in: path
+ *         name: workspaceId
+ *         required: true
+ *         schema: { type: string, format: uuid }
+ *     responses:
+ *       204: { description: Deleted }
+ */
 // GET /api/workspaces/:workspaceId
 workspaceRouter.get(
   '/:workspaceId',
