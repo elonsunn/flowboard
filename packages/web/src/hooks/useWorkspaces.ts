@@ -2,9 +2,15 @@
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api, ApiError } from '../lib/api-client';
-import type { CreateWorkspaceInput, UpdateWorkspaceInput } from '@flowboard/shared';
+import type { CreateWorkspaceInput, UpdateWorkspaceInput, InviteMemberInput, UpdateMemberRoleInput } from '@flowboard/shared';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
+
+export interface WorkspaceMember {
+  role: 'OWNER' | 'ADMIN' | 'MEMBER' | 'VIEWER';
+  joinedAt: string;
+  user: { id: string; name: string; email: string; avatarUrl: string | null };
+}
 
 export interface Workspace {
   id: string;
@@ -84,5 +90,51 @@ export function useDeleteWorkspace() {
       qc.removeQueries({ queryKey: ['workspace', workspaceId] });
       qc.invalidateQueries({ queryKey: ['workspaces'] });
     },
+  });
+}
+
+// ─── Members ──────────────────────────────────────────────────────────────────
+
+export function useWorkspaceMembers(workspaceId: string | undefined) {
+  return useQuery<WorkspaceMember[], ApiError>({
+    queryKey: ['members', workspaceId],
+    queryFn: () =>
+      api
+        .get<{ members: WorkspaceMember[] }>(`/workspaces/${workspaceId}/members`)
+        .then((d) => d.members),
+    enabled: !!workspaceId,
+  });
+}
+
+export function useInviteMember(workspaceId: string) {
+  const qc = useQueryClient();
+  return useMutation<WorkspaceMember, ApiError, InviteMemberInput>({
+    mutationFn: (input) =>
+      api
+        .post<{ member: WorkspaceMember }>(`/workspaces/${workspaceId}/members`, input)
+        .then((d) => d.member),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['members', workspaceId] }),
+  });
+}
+
+export function useUpdateMemberRole(workspaceId: string) {
+  const qc = useQueryClient();
+  return useMutation<WorkspaceMember, ApiError, { userId: string } & UpdateMemberRoleInput>({
+    mutationFn: ({ userId, ...body }) =>
+      api
+        .patch<{ member: WorkspaceMember }>(
+          `/workspaces/${workspaceId}/members/${userId}`,
+          body,
+        )
+        .then((d) => d.member),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['members', workspaceId] }),
+  });
+}
+
+export function useRemoveMember(workspaceId: string) {
+  const qc = useQueryClient();
+  return useMutation<void, ApiError, string>({
+    mutationFn: (userId) => api.delete(`/workspaces/${workspaceId}/members/${userId}`),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['members', workspaceId] }),
   });
 }

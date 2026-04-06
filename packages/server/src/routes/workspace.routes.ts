@@ -187,6 +187,31 @@ workspaceRouter.delete(
 
 // ── Members ───────────────────────────────────────────────────────────────────
 
+/**
+ * @openapi
+ * /workspaces/{workspaceId}/members:
+ *   get:
+ *     tags: [Workspaces]
+ *     summary: List workspace members
+ *     parameters:
+ *       - in: path
+ *         name: workspaceId
+ *         required: true
+ *         schema: { type: string, format: uuid }
+ *     responses:
+ *       200:
+ *         description: Member list
+ */
+// GET /api/workspaces/:workspaceId/members
+workspaceRouter.get(
+  '/:workspaceId/members',
+  authorize(WorkspaceRole.VIEWER, WorkspaceRole.MEMBER, WorkspaceRole.ADMIN, WorkspaceRole.OWNER),
+  asyncHandler(async (req, res) => {
+    const members = await workspaceService.listMembers(req.params.workspaceId);
+    res.json({ success: true, data: { members } });
+  }),
+);
+
 // POST /api/workspaces/:workspaceId/members
 workspaceRouter.post(
   '/:workspaceId/members',

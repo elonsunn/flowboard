@@ -86,6 +86,14 @@ export const workspaceService = {
 
   // ── Members ────────────────────────────────────────────────────────────────
 
+  async listMembers(workspaceId: string) {
+    return prisma.workspaceMember.findMany({
+      where: { workspaceId },
+      select: memberSelect,
+      orderBy: { joinedAt: 'asc' },
+    });
+  },
+
   async inviteMember(workspaceId: string, input: InviteMemberInput) {
     const user = await prisma.user.findUnique({ where: { email: input.email } });
     if (!user) throw new NotFoundError('No user found with that email');
