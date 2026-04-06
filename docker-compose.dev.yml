@@ -1,0 +1,31 @@
+# Development overrides — use with:
+#   docker compose -f docker-compose.yml -f docker-compose.dev.yml up
+#
+# Differences from production:
+#  - postgres and redis only (no built images)
+#  - server + worker + web run on the host via `pnpm dev` (hot reload)
+#  - Postgres port exposed for GUI clients (TablePlus, DBeaver, etc.)
+#  - Debug port 9229 exposed for Node.js inspector
+
+version: '3.9'
+
+services:
+  postgres:
+    ports:
+      - '5432:5432'
+    environment:
+      POSTGRES_PASSWORD: postgres
+
+  redis:
+    ports:
+      - '6379:6379'
+
+  # Disable built images in dev — run on host instead
+  server:
+    profiles: ['production-only']
+
+  worker:
+    profiles: ['production-only']
+
+  web:
+    profiles: ['production-only']

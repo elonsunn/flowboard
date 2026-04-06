@@ -1,0 +1,166 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+# Cancel in-flight runs for the same branch on new pushes
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+# ─── Reusable setup steps ─────────────────────────────────────────────────────
+# (referenced via needs + outputs rather than a composite action for simplicity)
+
+jobs:
+  # ── 1. Lint ──────────────────────────────────────────────────────────────────
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v3
+        with:
+          version: 10
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: ESLint (web)
+        working-directory: packages/web
+        run: pnpm lint
+
+  # ── 2. Type-check ─────────────────────────────────────────────────────────────
+  type-check:
+    name: Type-check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v3
+        with:
+          version: 10
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Generate Prisma client (needed for server types)
+        working-directory: packages/server
+        run: pnpm exec prisma generate
+
+      - name: tsc — server
+        working-directory: packages/server
+        run: pnpm exec tsc --noEmit
+
+      - name: tsc — shared
+        working-directory: packages/shared
+        run: pnpm exec tsc --noEmit
+
+  # ── 3. Integration tests ──────────────────────────────────────────────────────
+  test:
+    name: Integration tests
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:15-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: flowboard_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/flowboard_test
+      REDIS_URL: redis://127.0.0.1:6379
+      JWT_ACCESS_SECRET: ci-access-secret
+      JWT_REFRESH_SECRET: ci-refresh-secret
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v3
+        with:
+          version: 10
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Generate Prisma client
+        working-directory: packages/server
+        run: pnpm exec prisma generate
+
+      - name: Run database migrations
+        working-directory: packages/server
+        run: pnpm exec prisma migrate deploy
+
+      - name: Run tests
+        working-directory: packages/server
+        run: pnpm test
+
+  # ── 4. Docker build ───────────────────────────────────────────────────────────
+  build:
+    name: Docker build
+    runs-on: ubuntu-latest
+    # Only validate docker build on PRs and main — not every commit
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build server image (no push)
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: packages/server/Dockerfile
+          push: false
+          tags: flowboard/server:ci
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Build web image (no push)
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: packages/web/Dockerfile
+          push: false
+          tags: flowboard/web:ci
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          build-args: |
+            NEXT_PUBLIC_API_URL=http://localhost:4007
