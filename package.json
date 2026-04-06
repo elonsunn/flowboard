@@ -8,6 +8,7 @@
     "dev": "concurrently \"pnpm dev:server\" \"pnpm dev:web\""
   },
   "devDependencies": {
-    "concurrently": "^8.2.2"
+    "concurrently": "^8.2.2",
+    "socket.io-client": "^4.8.3"
   }
 }

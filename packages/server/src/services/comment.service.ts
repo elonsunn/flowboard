@@ -2,6 +2,7 @@ import { ActivityAction } from '@prisma/client';
 import type { CreateCommentInput } from '@flowboard/shared';
 import { prisma } from '../lib/prisma.js';
 import { ForbiddenError, NotFoundError } from '../lib/api-error.js';
+import { emitToTask } from '../lib/realtime.js';
 
 const commentSelect = {
   id: true,
@@ -30,8 +31,8 @@ export const commentService = {
   async create(taskId: string, userId: string, input: CreateCommentInput) {
     await assertTaskAccess(taskId, userId);
 
-    return prisma.$transaction(async (tx) => {
-      const comment = await tx.comment.create({
+    const comment = await prisma.$transaction(async (tx) => {
+      const created = await tx.comment.create({
         data: { taskId, authorId: userId, content: input.content },
         select: commentSelect,
       });
@@ -40,11 +41,16 @@ export const commentService = {
           taskId,
           actorId: userId,
           action: ActivityAction.COMMENTED,
-          metadata: { commentId: comment.id },
+          metadata: { commentId: created.id },
         },
       });
-      return comment;
+      return created;
     });
+
+    // Broadcast to all clients subscribed to this task's comment feed
+    emitToTask(taskId, 'task:comment:new', { ...comment, taskId });
+
+    return comment;
   },
 
   async list(taskId: string, userId: string) {

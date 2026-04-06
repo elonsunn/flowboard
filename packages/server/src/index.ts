@@ -3,6 +3,8 @@ import http from 'http';
 import { app } from './app.js';
 import { prisma } from './lib/prisma.js';
 import { gracefulShutdown as redisShutdown } from './lib/redis.js';
+import { initSocketServer } from './lib/socket.js';
+import { registerSocketHandlers } from './socket/index.js';
 
 const PORT = Number(process.env.PORT ?? 4000);
 
@@ -11,6 +13,11 @@ async function main() {
   console.log('[db] connected');
 
   const server = http.createServer(app);
+
+  // Initialize Socket.io — must happen before server.listen so the upgrade
+  // handler is registered before any WS handshakes arrive
+  const io = initSocketServer(server);
+  registerSocketHandlers(io);
 
   server.listen(PORT, () => {
     console.log(`[server] listening on http://localhost:${PORT}`);

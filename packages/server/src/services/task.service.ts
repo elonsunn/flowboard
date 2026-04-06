@@ -3,6 +3,7 @@ import type { CreateTaskInput, UpdateTaskInput, QueryTaskInput, ReorderTaskInput
 import { prisma } from '../lib/prisma.js';
 import { ForbiddenError, NotFoundError } from '../lib/api-error.js';
 import { cacheable, invalidateKey, CacheKey } from '../lib/cache.js';
+import { emitToProject } from '../lib/realtime.js';
 
 // ─── Auth helper ─────────────────────────────────────────────────────────────
 
@@ -122,8 +123,9 @@ export const taskService = {
       return created;
     });
 
-    // Invalidate task list cache for this project
+    // Invalidate task list cache and broadcast to subscribed clients
     await invalidateKey(CacheKey.projectTasks(projectId));
+    emitToProject(projectId, 'task:created', { ...task, projectId });
 
     return task;
   },
@@ -228,11 +230,12 @@ export const taskService = {
       return result;
     });
 
-    // Invalidate both the detail cache and the project task list
+    // Invalidate caches and broadcast
     await Promise.all([
       invalidateKey(CacheKey.task(taskId)),
       invalidateKey(CacheKey.projectTasks(projectId)),
     ]);
+    emitToProject(projectId, 'task:updated', { ...updated, projectId });
 
     return updated;
   },
@@ -246,6 +249,7 @@ export const taskService = {
       invalidateKey(CacheKey.task(taskId)),
       invalidateKey(CacheKey.projectTasks(projectId)),
     ]);
+    emitToProject(projectId, 'task:deleted', { taskId, projectId });
   },
 
   async reorder(projectId: string, userId: string, input: ReorderTaskInput) {
@@ -260,10 +264,11 @@ export const taskService = {
       ),
     );
 
-    // Invalidate detail caches for all reordered tasks + the list
+    // Invalidate detail caches for all reordered tasks + the list, then broadcast
     await Promise.all([
       ...input.tasks.map(({ taskId }) => invalidateKey(CacheKey.task(taskId))),
       invalidateKey(CacheKey.projectTasks(projectId)),
     ]);
+    emitToProject(projectId, 'task:reordered', { tasks: input.tasks, projectId });
   },
 };
