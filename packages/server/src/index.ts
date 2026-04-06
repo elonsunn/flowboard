@@ -2,6 +2,7 @@ import 'dotenv/config';
 import http from 'http';
 import { app } from './app.js';
 import { prisma } from './lib/prisma.js';
+import { gracefulShutdown as redisShutdown } from './lib/redis.js';
 
 const PORT = Number(process.env.PORT ?? 4000);
 
@@ -18,7 +19,7 @@ async function main() {
   async function shutdown(signal: string) {
     console.log(`[server] received ${signal}, shutting down gracefully`);
     server.close(async () => {
-      await prisma.$disconnect();
+      await Promise.all([prisma.$disconnect(), redisShutdown()]);
       console.log('[db] disconnected');
       process.exit(0);
     });

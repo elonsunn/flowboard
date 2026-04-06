@@ -2,6 +2,7 @@ import { ActivityAction } from '@prisma/client';
 import type { CreateTaskInput, UpdateTaskInput, QueryTaskInput, ReorderTaskInput } from '@flowboard/shared';
 import { prisma } from '../lib/prisma.js';
 import { ForbiddenError, NotFoundError } from '../lib/api-error.js';
+import { cacheable, invalidateKey, CacheKey } from '../lib/cache.js';
 
 // ─── Auth helper ─────────────────────────────────────────────────────────────
 
@@ -84,6 +85,7 @@ export const taskService = {
     if (!status) throw new NotFoundError('Status not found in this project');
 
     const task = await prisma.$transaction(async (tx) => {
+
       const agg = await tx.task.aggregate({ where: { projectId }, _max: { number: true, position: true } });
       const number = (agg._max.number ?? 0) + 1;
 
@@ -120,6 +122,9 @@ export const taskService = {
       return created;
     });
 
+    // Invalidate task list cache for this project
+    await invalidateKey(CacheKey.projectTasks(projectId));
+
     return task;
   },
 
@@ -154,12 +159,14 @@ export const taskService = {
   async getById(projectId: string, taskId: string, userId: string) {
     await assertProjectAccess(projectId, userId);
 
-    const task = await prisma.task.findFirst({
-      where: { id: taskId, projectId },
-      select: taskDetailSelect,
+    return cacheable(CacheKey.task(taskId), 5 * 60, async () => {
+      const task = await prisma.task.findFirst({
+        where: { id: taskId, projectId },
+        select: taskDetailSelect,
+      });
+      if (!task) throw new NotFoundError('Task not found');
+      return task;
     });
-    if (!task) throw new NotFoundError('Task not found');
-    return task;
   },
 
   async update(projectId: string, taskId: string, userId: string, input: UpdateTaskInput) {
@@ -201,8 +208,8 @@ export const taskService = {
       activities.push({ action: ActivityAction.UPDATED, metadata: { fields: Object.keys(input) } });
     }
 
-    return prisma.$transaction(async (tx) => {
-      const updated = await tx.task.update({
+    const updated = await prisma.$transaction(async (tx) => {
+      const result = await tx.task.update({
         where: { id: taskId },
         data: {
           ...input,
@@ -218,8 +225,16 @@ export const taskService = {
         });
       }
 
-      return updated;
+      return result;
     });
+
+    // Invalidate both the detail cache and the project task list
+    await Promise.all([
+      invalidateKey(CacheKey.task(taskId)),
+      invalidateKey(CacheKey.projectTasks(projectId)),
+    ]);
+
+    return updated;
   },
 
   async delete(projectId: string, taskId: string, userId: string) {
@@ -227,6 +242,10 @@ export const taskService = {
     const task = await prisma.task.findFirst({ where: { id: taskId, projectId } });
     if (!task) throw new NotFoundError('Task not found');
     await prisma.task.delete({ where: { id: taskId } });
+    await Promise.all([
+      invalidateKey(CacheKey.task(taskId)),
+      invalidateKey(CacheKey.projectTasks(projectId)),
+    ]);
   },
 
   async reorder(projectId: string, userId: string, input: ReorderTaskInput) {
@@ -240,5 +259,11 @@ export const taskService = {
         }),
       ),
     );
+
+    // Invalidate detail caches for all reordered tasks + the list
+    await Promise.all([
+      ...input.tasks.map(({ taskId }) => invalidateKey(CacheKey.task(taskId))),
+      invalidateKey(CacheKey.projectTasks(projectId)),
+    ]);
   },
 };

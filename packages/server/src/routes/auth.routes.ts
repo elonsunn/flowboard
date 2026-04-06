@@ -10,9 +10,13 @@ import {
 import { asyncHandler } from '../middleware/async-handler.js';
 import { validate } from '../middleware/validate.js';
 import { authenticate } from '../middleware/authenticate.js';
+import { authRateLimit } from '../middleware/rate-limit.js';
 import { AppError, UnauthorizedError } from '../lib/api-error.js';
 
 export const authRouter = Router();
+
+// 5 req / min per IP on all auth endpoints (brute-force protection)
+authRouter.use(authRateLimit);
 
 // ─── Schemas ─────────────────────────────────────────────────────────────────
 

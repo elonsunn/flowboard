@@ -3,6 +3,7 @@ import cors from 'cors';
 import helmet from 'helmet';
 import { requestLogger } from './middleware/request-logger.js';
 import { errorHandler } from './middleware/error-handler.js';
+import { globalRateLimit } from './middleware/rate-limit.js';
 import { rootRouter } from './routes/index.js';
 
 export const app = express();
@@ -14,6 +15,9 @@ app.use(express.json());
 
 // Logging (after body parsing so content-length is accurate)
 app.use(requestLogger);
+
+// Global rate limiting: 100 req / min per IP
+app.use('/api', globalRateLimit);
 
 // Routes
 app.use('/api', rootRouter);
