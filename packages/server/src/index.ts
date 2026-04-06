@@ -1,22 +1,34 @@
 import 'dotenv/config';
 import http from 'http';
 import { app } from './app.js';
+import { prisma } from './lib/prisma.js';
 
 const PORT = Number(process.env.PORT ?? 4000);
 
-const server = http.createServer(app);
+async function main() {
+  await prisma.$connect();
+  console.log('[db] connected');
 
-server.listen(PORT, () => {
-  console.log(`[server] listening on http://localhost:${PORT}`);
-});
+  const server = http.createServer(app);
 
-function shutdown(signal: string) {
-  console.log(`[server] received ${signal}, shutting down gracefully`);
-  server.close(() => {
-    console.log('[server] closed');
-    process.exit(0);
+  server.listen(PORT, () => {
+    console.log(`[server] listening on http://localhost:${PORT}`);
   });
+
+  async function shutdown(signal: string) {
+    console.log(`[server] received ${signal}, shutting down gracefully`);
+    server.close(async () => {
+      await prisma.$disconnect();
+      console.log('[db] disconnected');
+      process.exit(0);
+    });
+  }
+
+  process.on('SIGTERM', () => void shutdown('SIGTERM'));
+  process.on('SIGINT', () => void shutdown('SIGINT'));
 }
 
-process.on('SIGTERM', () => shutdown('SIGTERM'));
-process.on('SIGINT', () => shutdown('SIGINT'));
+main().catch((err) => {
+  console.error('[server] fatal startup error', err);
+  process.exit(1);
+});
