@@ -1,21 +1,22 @@
 import 'dotenv/config';
-import express from 'express';
-import cors from 'cors';
-import helmet from 'helmet';
-import morgan from 'morgan';
+import http from 'http';
+import { app } from './app.js';
 
-const app = express();
-const PORT = process.env.PORT ?? 4000;
+const PORT = Number(process.env.PORT ?? 4000);
 
-app.use(helmet());
-app.use(cors({ origin: process.env.CORS_ORIGIN ?? 'http://localhost:3000' }));
-app.use(morgan('dev'));
-app.use(express.json());
+const server = http.createServer(app);
 
-app.get('/health', (_req, res) => {
-  res.json({ status: 'ok', timestamp: new Date().toISOString() });
-});
-
-app.listen(PORT, () => {
+server.listen(PORT, () => {
   console.log(`[server] listening on http://localhost:${PORT}`);
 });
+
+function shutdown(signal: string) {
+  console.log(`[server] received ${signal}, shutting down gracefully`);
+  server.close(() => {
+    console.log('[server] closed');
+    process.exit(0);
+  });
+}
+
+process.on('SIGTERM', () => shutdown('SIGTERM'));
+process.on('SIGINT', () => shutdown('SIGINT'));
