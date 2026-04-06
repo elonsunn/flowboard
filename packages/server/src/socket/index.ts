@@ -10,6 +10,9 @@ export function registerSocketHandlers(io: IOServer): void {
 
   io.on('connection', (socket) => {
     console.log(`[socket] connected  user=${socket.data.userId} id=${socket.id}`);
+    // Join the user's personal room so the notification worker can target them
+    // across processes via the Redis adapter
+    void socket.join(`user:${socket.data.userId}`);
 
     registerWorkspaceHandlers(io, socket);
     registerTaskHandlers(io, socket);

@@ -36,6 +36,16 @@ export interface PresencePayload {
   onlineUserIds: string[];
 }
 
+export interface NotificationPayload {
+  id: string;
+  type: string;
+  title: string;
+  content: string;
+  taskId: string | null;
+  read: boolean;
+  createdAt: string;
+}
+
 // ─── Server → Client events ──────────────────────────────────────────────────
 
 export interface ServerToClientEvents {
@@ -51,6 +61,8 @@ export interface ServerToClientEvents {
   'task:comment:new': (comment: CommentPayload) => void;
   /** Current online users in a workspace changed */
   'workspace:presence': (data: PresencePayload) => void;
+  /** A new notification for the authenticated user */
+  'notification:new': (notification: NotificationPayload) => void;
 }
 
 // ─── Client → Server events ──────────────────────────────────────────────────

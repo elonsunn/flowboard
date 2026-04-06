@@ -28,3 +28,8 @@ export function emitToTask(taskId: string, event: string, data: unknown): void {
 export function emitToWorkspace(workspaceId: string, event: string, data: unknown): void {
   emit(`workspace:${workspaceId}`, event, data);
 }
+
+/** Emit to the personal room of a specific user (across all their connected sockets) */
+export function emitToUser(userId: string, event: string, data: unknown): void {
+  emit(`user:${userId}`, event, data);
+}

@@ -5,7 +5,8 @@
   "scripts": {
     "dev:server": "pnpm --filter server dev",
     "dev:web": "pnpm --filter web dev",
-    "dev": "concurrently \"pnpm dev:server\" \"pnpm dev:web\""
+    "dev:worker": "pnpm --filter server dev:worker",
+    "dev": "concurrently \"pnpm dev:server\" \"pnpm dev:web\" \"pnpm dev:worker\""
   },
   "devDependencies": {
     "concurrently": "^8.2.2",

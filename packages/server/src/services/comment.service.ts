@@ -3,6 +3,7 @@ import type { CreateCommentInput } from '@flowboard/shared';
 import { prisma } from '../lib/prisma.js';
 import { ForbiddenError, NotFoundError } from '../lib/api-error.js';
 import { emitToTask } from '../lib/realtime.js';
+import { getQueue, NOTIFICATION_QUEUE } from '../lib/queue.js';
 
 const commentSelect = {
   id: true,
@@ -49,6 +50,14 @@ export const commentService = {
 
     // Broadcast to all clients subscribed to this task's comment feed
     emitToTask(taskId, 'task:comment:new', { ...comment, taskId });
+
+    // Enqueue notification (fire-and-forget)
+    getQueue(NOTIFICATION_QUEUE)
+      .add('TASK_COMMENTED', { type: 'TASK_COMMENTED', taskId, commentId: comment.id, commenterId: userId }, {
+        attempts: 3,
+        backoff: { type: 'exponential', delay: 1_000 },
+      })
+      .catch((err: Error) => console.error('[comment-service] failed to enqueue notification:', err.message));
 
     return comment;
   },

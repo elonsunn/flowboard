@@ -32,6 +32,13 @@ enum ActivityAction {
   DELETED
 }
 
+enum NotificationType {
+  TASK_ASSIGNED
+  TASK_STATUS_CHANGED
+  TASK_COMMENTED
+  TASK_DUE_SOON
+}
+
 // ─── Models ──────────────────────────────────────────────────────────────────
 
 model User {
@@ -48,6 +55,7 @@ model User {
   createdTasks  Task[]            @relation("TaskCreator")
   comments      Comment[]
   activities    Activity[]
+  notifications Notification[]
 }
 
 model Workspace {
@@ -126,8 +134,9 @@ model Task {
   creator    User       @relation("TaskCreator", fields: [creatorId], references: [id])
   parentTask Task?      @relation("SubTasks", fields: [parentTaskId], references: [id])
   subTasks   Task[]     @relation("SubTasks")
-  comments   Comment[]
-  activities Activity[]
+  comments      Comment[]
+  activities    Activity[]
+  notifications Notification[]
 
   @@unique([projectId, number])
   @@index([statusId])
@@ -165,4 +174,21 @@ model Activity {
 
   @@index([taskId])
   @@index([actorId])
+}
+
+model Notification {
+  id        String           @id @default(uuid())
+  userId    String
+  type      NotificationType
+  title     String
+  content   String
+  taskId    String?
+  read      Boolean          @default(false)
+  createdAt DateTime         @default(now())
+
+  user User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  task Task? @relation(fields: [taskId], references: [id], onDelete: SetNull)
+
+  @@index([userId, read])
+  @@index([userId, createdAt])
 }

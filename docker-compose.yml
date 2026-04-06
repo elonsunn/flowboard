@@ -23,6 +23,27 @@ services:
     volumes:
       - redis_data:/data
 
+  worker:
+    image: node:22-alpine
+    container_name: flowboard-worker
+    working_dir: /app
+    restart: unless-stopped
+    volumes:
+      - .:/app
+      - /app/node_modules
+    command: sh -c "npm install -g pnpm && pnpm install --frozen-lockfile && pnpm start:worker"
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/flowboard
+      REDIS_URL: redis://redis:6379
+      JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET:-changeme}
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:-changeme}
+    depends_on:
+      - postgres
+      - redis
+    profiles:
+      - worker
+
 volumes:
   postgres_data:
   redis_data:

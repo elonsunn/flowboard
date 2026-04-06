@@ -4,6 +4,8 @@ import { prisma } from '../lib/prisma.js';
 import { ForbiddenError, NotFoundError } from '../lib/api-error.js';
 import { cacheable, invalidateKey, CacheKey } from '../lib/cache.js';
 import { emitToProject } from '../lib/realtime.js';
+import { getQueue, NOTIFICATION_QUEUE } from '../lib/queue.js';
+import type { NotificationJobData } from '../workers/notification.worker.js';
 
 // ─── Auth helper ─────────────────────────────────────────────────────────────
 
@@ -179,6 +181,9 @@ export const taskService = {
 
     const activities: { action: ActivityAction; metadata: object }[] = [];
 
+    // Track which notifications to enqueue after the DB write
+    const pendingNotifications: NotificationJobData[] = [];
+
     // Compute position if status changed
     let position = old.position;
     if (input.statusId && input.statusId !== old.statusId) {
@@ -191,6 +196,13 @@ export const taskService = {
         action: ActivityAction.STATUS_CHANGED,
         metadata: { from: old.statusId, to: input.statusId },
       });
+      pendingNotifications.push({
+        type: 'TASK_STATUS_CHANGED',
+        taskId,
+        oldStatusId: old.statusId,
+        newStatusId: input.statusId,
+        changedBy: userId,
+      });
     }
 
     if (input.assigneeId !== undefined && input.assigneeId !== old.assigneeId) {
@@ -198,6 +210,14 @@ export const taskService = {
         action: ActivityAction.ASSIGNED,
         metadata: { from: old.assigneeId, to: input.assigneeId },
       });
+      if (input.assigneeId) {
+        pendingNotifications.push({
+          type: 'TASK_ASSIGNED',
+          taskId,
+          assigneeId: input.assigneeId,
+          assignerId: userId,
+        });
+      }
     }
 
     const hasOtherChanges =
@@ -236,6 +256,19 @@ export const taskService = {
       invalidateKey(CacheKey.projectTasks(projectId)),
     ]);
     emitToProject(projectId, 'task:updated', { ...updated, projectId });
+
+    // Enqueue notification jobs (fire-and-forget — failures don't affect the response)
+    if (pendingNotifications.length > 0) {
+      const queue = getQueue(NOTIFICATION_QUEUE);
+      await Promise.all(
+        pendingNotifications.map((data) =>
+          queue.add(data.type, data, {
+            attempts: 3,
+            backoff: { type: 'exponential', delay: 1_000 },
+          }),
+        ),
+      ).catch((err: Error) => console.error('[task-service] failed to enqueue notification:', err.message));
+    }
 
     return updated;
   },
