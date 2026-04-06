@@ -148,12 +148,6 @@ export function createNotificationWorker(): Worker<NotificationJobData> {
     {
       connection: getRedisConnection(),
       concurrency: 5,
-      defaultJobOptions: {
-        attempts: 3,
-        backoff: { type: 'exponential', delay: 1_000 },
-        removeOnComplete: { count: 1_000 },
-        removeOnFail: { count: 500 },
-      },
     },
   );
 

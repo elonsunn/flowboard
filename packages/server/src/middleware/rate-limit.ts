@@ -89,7 +89,7 @@ export function rateLimit({ windowMs, maxRequests, namespace = 'default', keyGen
 // ─── Preset limiters ─────────────────────────────────────────────────────────
 
 /** Global: 100 req / minute per IP — namespace 'global' keeps this bucket separate from auth */
-export const globalRateLimit = rateLimit({ windowMs: 60_000, maxRequests: 100, namespace: 'global' });
+export const globalRateLimit: RequestHandler = rateLimit({ windowMs: 60_000, maxRequests: 100, namespace: 'global' });
 
 /** Auth endpoints: 5 req / minute per IP — stricter brute-force protection */
-export const authRateLimit = rateLimit({ windowMs: 60_000, maxRequests: 5, namespace: 'auth' });
+export const authRateLimit: RequestHandler = rateLimit({ windowMs: 60_000, maxRequests: 5, namespace: 'auth' });

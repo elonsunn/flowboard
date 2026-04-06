@@ -8,7 +8,7 @@ import { globalRateLimit } from './middleware/rate-limit.js';
 import { rootRouter } from './routes/index.js';
 import { swaggerSpec } from './lib/swagger.js';
 
-export const app = express();
+export const app: import('express').Application = express();
 
 // Security & parsing
 app.use(helmet());

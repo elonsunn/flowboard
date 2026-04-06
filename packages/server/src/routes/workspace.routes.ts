@@ -12,7 +12,7 @@ import { asyncHandler } from '../middleware/async-handler.js';
 import { validate } from '../middleware/validate.js';
 import { workspaceService } from '../services/workspace.service.js';
 
-export const workspaceRouter = Router();
+export const workspaceRouter: import("express").Router = Router();
 
 workspaceRouter.use(authenticate);
 

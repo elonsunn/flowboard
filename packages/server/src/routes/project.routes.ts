@@ -8,7 +8,7 @@ import { validate } from '../middleware/validate.js';
 import { projectService } from '../services/project.service.js';
 
 // Mounted at /api/workspaces/:workspaceId/projects — workspaceId is inherited via mergeParams
-export const projectRouter = Router({ mergeParams: true });
+export const projectRouter: import("express").Router = Router({ mergeParams: true });
 
 projectRouter.use(authenticate);
 

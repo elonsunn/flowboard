@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { asyncHandler } from '../middleware/async-handler.js';
 
-export const healthRouter = Router();
+export const healthRouter: import("express").Router = Router();
 
 healthRouter.get('/', asyncHandler(async (_req, res) => {
   const memUsage = process.memoryUsage();

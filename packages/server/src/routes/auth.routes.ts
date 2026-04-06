@@ -12,8 +12,9 @@ import { validate } from '../middleware/validate.js';
 import { authenticate } from '../middleware/authenticate.js';
 import { authRateLimit } from '../middleware/rate-limit.js';
 import { AppError, UnauthorizedError } from '../lib/api-error.js';
+import { getGitHubAuthUrl, handleGitHubCallback } from '../services/oauth.service.js';
 
-export const authRouter = Router();
+export const authRouter: import("express").Router = Router();
 
 // 5 req / min per IP on all auth endpoints (brute-force protection)
 authRouter.use(authRateLimit);
@@ -273,5 +274,76 @@ authRouter.get(
       select: { id: true, email: true, name: true, avatarUrl: true, createdAt: true },
     });
     res.json({ success: true, data: { user } });
+  }),
+);
+
+// ─── GitHub OAuth ─────────────────────────────────────────────────────────────
+
+const FRONTEND_URL = process.env.FRONTEND_URL ?? 'http://localhost:3000';
+
+/**
+ * @openapi
+ * /auth/github:
+ *   get:
+ *     tags: [Auth]
+ *     summary: Redirect to GitHub OAuth
+ *     security: []
+ *     responses:
+ *       302:
+ *         description: Redirect to GitHub authorization page
+ */
+// GET /api/auth/github — redirect to GitHub authorization page
+authRouter.get(
+  '/github',
+  asyncHandler(async (_req, res) => {
+    const url = await getGitHubAuthUrl();
+    res.redirect(url);
+  }),
+);
+
+/**
+ * @openapi
+ * /auth/github/callback:
+ *   get:
+ *     tags: [Auth]
+ *     summary: GitHub OAuth callback
+ *     security: []
+ *     parameters:
+ *       - in: query
+ *         name: code
+ *         schema: { type: string }
+ *         required: true
+ *       - in: query
+ *         name: state
+ *         schema: { type: string }
+ *         required: true
+ *     responses:
+ *       302:
+ *         description: Redirect to frontend with tokens
+ */
+// GET /api/auth/github/callback — GitHub posts code+state here
+authRouter.get(
+  '/github/callback',
+  asyncHandler(async (req, res) => {
+    const { code, state, error } = req.query as Record<string, string>;
+
+    // User denied OAuth permission on GitHub's side
+    if (error) {
+      return res.redirect(`${FRONTEND_URL}/login?error=oauth_denied`);
+    }
+
+    if (!code || !state) {
+      return res.redirect(`${FRONTEND_URL}/login?error=oauth_invalid`);
+    }
+
+    const tokens = await handleGitHubCallback(code, state);
+
+    // Pass tokens to the frontend via query params so the SPA can store them
+    // in memory without ever touching localStorage.
+    const params = new URLSearchParams({
+      accessToken: tokens.accessToken,
+      refreshToken: tokens.refreshToken,
+    });
+    res.redirect(`${FRONTEND_URL}/auth/callback?${params}`);
   }),
 );

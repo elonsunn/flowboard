@@ -5,7 +5,7 @@ import { asyncHandler } from '../middleware/async-handler.js';
 import { validate } from '../middleware/validate.js';
 import { authenticate } from '../middleware/authenticate.js';
 
-export const userRouter = Router();
+export const userRouter: import("express").Router = Router();
 
 // All user routes require authentication
 userRouter.use(authenticate);

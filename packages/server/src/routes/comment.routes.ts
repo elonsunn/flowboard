@@ -6,8 +6,8 @@ import { validate } from '../middleware/validate.js';
 import { commentService } from '../services/comment.service.js';
 
 // Two routers: one for task-scoped comment operations, one for direct comment operations
-export const taskCommentRouter = Router();
-export const commentRouter = Router();
+export const taskCommentRouter: import("express").Router = Router();
+export const commentRouter: import("express").Router = Router();
 
 taskCommentRouter.use(authenticate);
 commentRouter.use(authenticate);

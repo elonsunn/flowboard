@@ -8,7 +8,8 @@ import { getIO } from './socket.js';
 
 function emit(room: string, event: string, data: unknown): void {
   try {
-    getIO().to(room).emit(event, data);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    getIO().to(room).emit(event as any, data);
   } catch {
     // Socket server not yet initialized (e.g. during tests) — silently skip
   }

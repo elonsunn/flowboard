@@ -7,7 +7,7 @@ import { projectRouter } from './project.routes.js';
 import { taskRouter } from './task.routes.js';
 import { taskCommentRouter, commentRouter } from './comment.routes.js';
 
-export const rootRouter = Router();
+export const rootRouter: import("express").Router = Router();
 
 rootRouter.use('/health', healthRouter);
 rootRouter.use('/auth', authRouter);

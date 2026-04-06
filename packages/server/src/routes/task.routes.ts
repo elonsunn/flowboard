@@ -5,7 +5,7 @@ import { asyncHandler } from '../middleware/async-handler.js';
 import { validate } from '../middleware/validate.js';
 import { taskService } from '../services/task.service.js';
 
-export const taskRouter = Router();
+export const taskRouter: import("express").Router = Router();
 
 taskRouter.use(authenticate);
 

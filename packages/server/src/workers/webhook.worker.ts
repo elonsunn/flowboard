@@ -53,12 +53,6 @@ export function createWebhookWorker(): Worker<WebhookJobData> {
   const worker = new Worker<WebhookJobData>(WEBHOOK_QUEUE, processWebhook, {
     connection: getRedisConnection(),
     concurrency: 10,
-    defaultJobOptions: {
-      attempts: 3,
-      backoff: { type: 'exponential', delay: 2_000 },
-      removeOnComplete: { count: 500 },
-      removeOnFail: { count: 200 },
-    },
   });
 
   worker.on('failed', (job, err) => {
